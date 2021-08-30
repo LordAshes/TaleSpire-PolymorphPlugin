@@ -16,7 +16,7 @@ namespace LordAshes
     {
         // Plugin info
         private const string Guid = "org.lordashes.plugins.polymorph";
-        private const string Version = "1.0.0.0";
+        private const string Version = "1.1.0.0";
 
         // Content directory
         private string dir = UnityEngine.Application.dataPath.Substring(0, UnityEngine.Application.dataPath.LastIndexOf("/")) + "/TaleSpire_CustomData/";
@@ -35,56 +35,43 @@ namespace LordAshes
         {
             UnityEngine.Debug.Log("Lord Ashes Polymorph Plugin Active.");
 
-            StateDetection.Initialize(this.GetType());
-
-            // Add transformation main menu
-            RadialUI.RadialSubmenu.EnsureMainMenuItem(RadialUI.RadialUIPlugin.Guid + ".Transformation",
-                                                        RadialUI.RadialSubmenu.MenuType.character,
-                                                        "Transformation",
-                                                        RadialUI.RadialSubmenu.GetIconFromFile(dir + "Images/Icons/Transformation.png")
-                                                      );
-
-            RadialUI.RadialSubmenu.CreateSubMenuItem(   RadialUI.RadialUIPlugin.Guid + ".Transformation",
-                                                        "Polymorph", 
-                                                        RadialUI.RadialSubmenu.GetIconFromFile(dir + "Images/Icons/Polymorph.png"),
-                                                        SelectPolymorph,
-                                                        false
-                                                    );
-
             // Read polymorph transformations from configuration file
-            for(int i=0; i<transfromations.Length; i++)
+            for (int i = 0; i < transfromations.Length; i++)
             {
-                transfromations[i] = Config.Bind("Settings", "Polymorph Shape " + i + 1, "");
-            }
-        }
-
-        /// <summary>
-        /// Method to create polymorph sub-menu
-        /// </summary>
-        /// <param name="cid">Radiam menu creature</param>
-        /// <param name="menu">Menu</param>
-        /// <param name="mmi">MapMenuItem</param>
-        private void SelectPolymorph(CreatureGuid cid, string menu, MapMenuItem mmi)
-        {
-            Debug.Log("Building Sub-Menu");
-            // Create sub-menu
-            MapMenu mapMenu = MapMenuManager.OpenMenu(mmi, MapMenu.MenuType.SUBROOT);
-            // Populate sub-menu based on all items added by any plugins for the specific main menu entry
-            foreach (ConfigEntry<string> iconName in transfromations)
-            {
-                if (iconName.Value != null && iconName.Value != "")
+                transfromations[i] = Config.Bind("Settings", "Polymorph Shape " + (i + 1).ToString("d2"), "");
+                if (transfromations[i].Value != null)
                 {
-                    Debug.Log("Building Adding '" + iconName.Value + "'...");
-                    mapMenu.AddItem(new MapMenu.ItemArgs()
-                    {
-                        Action = (_mmi, _obj) => { ApplyPolymorph(cid, iconName.Value); },
-                        Icon = (System.IO.File.Exists(dir + "Images/Icons/" + PolymorphPlugin.Guid + "/" + iconName.Value + ".PNG")) ? RadialUI.RadialSubmenu.GetIconFromFile(dir + "Images/Icons/" + PolymorphPlugin.Guid + "/" + iconName.Value + ".PNG") : RadialUI.RadialSubmenu.GetIconFromFile(dir + "Images/Icons/Polymorph.png"),
-                        Title = iconName.Value,
-                        CloseMenuOnActivate = true
-                    });
+                    Debug.Log("Polymorph Shape " + (i + 1).ToString("d2") + " is " + transfromations[i].Value);
+                }
+                else
+                {
+                    Debug.Log("Polymorph Shape " + (i + 1).ToString("d2") + " is not set");
                 }
             }
-            Debug.Log("Sub-Menu Build Complete");
+
+            // Add transformation main menu
+            RadialUI.RadialSubmenu.EnsureMainMenuItem(  RadialUI.RadialUIPlugin.Guid + ".Ploymorph",
+                                                        RadialUI.RadialSubmenu.MenuType.character,
+                                                        "Polymorph",
+                                                        FileAccessPlugin.Image.LoadSprite("Polymorph.png")
+                                                      );
+
+
+            // Create sub menu entry for each transformation
+            foreach (ConfigEntry<string> iconName in transfromations)
+            {
+                if (iconName.Value != "")
+                {
+                    RadialUI.RadialSubmenu.CreateSubMenuItem(   RadialUI.RadialUIPlugin.Guid + ".Ploymorph",
+                                                                iconName.Value,
+                                                                (FileAccessPlugin.File.Exists(iconName.Value + ".PNG")) ? FileAccessPlugin.Image.LoadSprite(iconName.Value + ".PNG") : FileAccessPlugin.Image.LoadSprite("Polymorph.png"),
+                                                                (cid, obj, mmi) => ApplyPolymorph(cid, obj, mmi, iconName.Value),
+                                                                true, () => { return LocalClient.HasControlOfCreature(new CreatureGuid(RadialUI.RadialUIPlugin.GetLastRadialTargetCreature())); }
+                                                            );
+                }
+            }
+
+            StateDetection.Initialize(this.GetType());
         }
 
         /// <summary>
@@ -92,7 +79,7 @@ namespace LordAshes
         /// </summary>
         /// <param name="cid">Radial menu creature</param>
         /// <param name="transformationName">String version of transformation name</param>
-        private void ApplyPolymorph(CreatureGuid cid, string transformationName)
+        private void ApplyPolymorph(CreatureGuid cid, string obj, MapMenuItem mmi, string transformationName)
         {
             StatMessaging.SetInfo(cid, CustomMiniPlugin.Guid, transformationName);
         }
